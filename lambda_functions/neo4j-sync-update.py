@@ -6,15 +6,15 @@ import json
 from neo4j import GraphDatabase
 
 # RDS credentials
-RDS_HOST = "database-1.cb0gsmcyc0ns.us-west-1.rds.amazonaws.com"
-RDS_DB = "fitbit_data"
+RDS_HOST = "database-1.cfkiysy2kojp.us-east-2.rds.amazonaws.com"
+RDS_DB = "testname"
 RDS_USER = "postgres"
-RDS_PASSWORD = "Pass1234!"
+RDS_PASSWORD = "5185148868K$p"
 
 # # Neo4j credentials
-NEO4J_URI = "neo4j+s://9d24ccb0.databases.neo4j.io"
+NEO4J_URI = "neo4j+s://bc02f7bd.databases.neo4j.io"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "ll0grkN_ME_vUSDlN2JMRd12xZ8m8Qmj25M0e5LZFuA"
+NEO4J_PASSWORD = "omVxl-U8whzzk-jKPygO-TElJr-986SgKECIgcoVkec"
 
 
 def get_db_connection():
