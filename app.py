@@ -50,15 +50,15 @@ min_date, max_date = date_range.iloc[0] if not date_range.empty else (
 selected_date = st.sidebar.date_input(
     "Select Date", min_value=min_date, max_value=max_date)
 
-# Get latest recorded hour for the day
-latest_hour_query = """
-    SELECT MAX(EXTRACT(HOUR FROM activity_hour)) 
-    FROM hourly_data 
-    WHERE user_id = %s AND activity_hour::DATE = %s
-"""
-latest_hour_result = fetch_data(latest_hour_query, (user_id, selected_date))
-latest_hour = latest_hour_result.iloc[0,
-                                      0] if not latest_hour_result.empty else 23
+# # Get latest recorded hour for the day
+# latest_hour_query = """
+#     SELECT MAX(EXTRACT(HOUR FROM activity_hour)) 
+#     FROM hourly_data 
+#     WHERE user_id = %s AND activity_hour::DATE = %s
+# """
+# latest_hour_result = fetch_data(latest_hour_query, (user_id, selected_date))
+# latest_hour = latest_hour_result.iloc[0,
+#                                       0] if not latest_hour_result.empty else 23
 
 # Fetch daily stats or aggregate hourly data if daily stats not available
 daily_stats_query = """
