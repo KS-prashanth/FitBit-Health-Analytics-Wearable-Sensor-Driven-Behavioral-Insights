@@ -3,6 +3,7 @@ import pandas as pd
 import psycopg2
 import plotly.express as px
 from neo4j import GraphDatabase
+from datetime import date, datetime, time, timedelta  # ✅ added
 
 # Neo4j credentials
 NEO4J_URI = "neo4j+ssc://9d24ccb0.databases.neo4j.io"
@@ -15,13 +16,12 @@ DB_CONFIG = {
     'port': 5432,
     'dbname': 'testname',
     'user': 'postgres',
-    'password': '5185148868K$p'
+    'password': '5185148868K$p',
+    'sslmode': 'require'   # ✅ IMPORTANT for AWS RDS
 }
-
 
 def get_connection():
     return psycopg2.connect(**DB_CONFIG)
-
 
 def fetch_data(query, params=None):
     conn = get_connection()
@@ -29,36 +29,49 @@ def fetch_data(query, params=None):
     conn.close()
     return df
 
-
 # Streamlit UI
 st.title("📊 Fitbit Health Dashboard")
 
-# User Login
+# -----------------------------
+# User Login (Dropdown from DB)
+# -----------------------------
 st.sidebar.header("User Login")
-user_id = st.sidebar.text_input("Enter User ID")
-if not user_id:
-    st.warning("Please enter a valid User ID to proceed.")
+
+user_ids_df = fetch_data("SELECT DISTINCT user_id FROM daily_data ORDER BY user_id")
+user_ids = user_ids_df["user_id"].dropna().astype(int).tolist()
+
+if not user_ids:
+    st.error("No user IDs found in daily_data.")
     st.stop()
 
-# Fetch available dates
-date_query = "SELECT MIN(activity_date), MAX(activity_date) FROM daily_data WHERE user_id = %s"
-date_range = fetch_data(date_query, (user_id,))
-min_date, max_date = date_range.iloc[0] if not date_range.empty else (
-    None, None)
+user_id = st.sidebar.selectbox("Select User ID", user_ids)
 
-# Date selection
+# ----------------------------------------
+# Date selection (ONLY Fitabase date range)
+# ----------------------------------------
+FITABASE_MIN_DATE = date(2016, 3, 12)
+FITABASE_MAX_DATE = date(2016, 5, 12)
+
 selected_date = st.sidebar.date_input(
-    "Select Date", min_value=min_date, max_value=max_date)
+    "Select Date",
+    value=FITABASE_MAX_DATE,
+    min_value=FITABASE_MIN_DATE,
+    max_value=FITABASE_MAX_DATE
+)
+st.sidebar.caption(f"Data available: {FITABASE_MIN_DATE} → {FITABASE_MAX_DATE}")
 
-# # Get latest recorded hour for the day
-# latest_hour_query = """
-#     SELECT MAX(EXTRACT(HOUR FROM activity_hour)) 
-#     FROM hourly_data 
-#     WHERE user_id = %s AND activity_hour::DATE = %s
-# """
-# latest_hour_result = fetch_data(latest_hour_query, (user_id, selected_date))
-# latest_hour = latest_hour_result.iloc[0,
-#                                       0] if not latest_hour_result.empty else 23
+# (Keep this if you want; not required anymore for the fallback)
+latest_hour_query = """
+    SELECT MAX(EXTRACT(HOUR FROM activity_hour)) 
+    FROM hourly_data 
+    WHERE user_id = %s AND activity_hour::DATE = %s
+"""
+latest_hour_result = fetch_data(latest_hour_query, (user_id, selected_date))
+latest_hour = latest_hour_result.iloc[0, 0] if not latest_hour_result.empty else None
+if latest_hour is None:
+    latest_hour = 23
+else:
+    latest_hour = int(latest_hour)
 
 # Fetch daily stats or aggregate hourly data if daily stats not available
 daily_stats_query = """
@@ -73,6 +86,7 @@ daily_stats_query = """
 daily_stats = fetch_data(
     daily_stats_query, (user_id, selected_date, user_id, selected_date))
 
+# ✅ FIXED fallback (no "None:59:59" timestamps)
 if daily_stats.empty:
     data_query = """
         SELECT SUM(steps) AS total_steps, SUM(calories) AS total_calories, 
@@ -82,10 +96,13 @@ if daily_stats.empty:
                 FROM minute_data 
                 WHERE user_id = %s AND activity_minute::DATE = %s
                 ) AS resting_hr
-        FROM hourly_data WHERE user_id = %s AND activity_hour BETWEEN %s AND %s
+        FROM hourly_data WHERE user_id = %s AND activity_hour >= %s AND activity_hour < %s
     """
-    params = (user_id, selected_date, user_id,
-              f"{selected_date} 00:00:00", f"{selected_date} {latest_hour}:59:59")
+
+    start_ts = datetime.combine(selected_date, time.min)
+    end_ts = start_ts + timedelta(days=1)
+
+    params = (user_id, selected_date, user_id, start_ts, end_ts)
     daily_stats = fetch_data(data_query, params)
 
 # Fetch intensity data
@@ -105,32 +122,25 @@ anomaly_query = """
 anomaly_thresholds = fetch_data(anomaly_query)
 
 # Convert thresholds into a dictionary
-thresholds = {row['metric_name']: (
-    row['min_value'], row['max_value']) for _, row in anomaly_thresholds.iterrows()}
+thresholds = {row['metric_name']: (row['min_value'], row['max_value'])
+              for _, row in anomaly_thresholds.iterrows()}
 
 # Function to detect anomalies
-
-
 def detect_anomaly(metric, value):
-    if metric in thresholds and value is not None:
+    if metric in thresholds and value is not None and not pd.isna(value):
         min_val, max_val = thresholds[metric]
         return value < min_val or value > max_val
     return False
-
 
 # Display Metrics
 if not daily_stats.empty:
     st.write("### Health Metrics for Selected Day")
     st.metric("Total Steps", f"{int(daily_stats['total_steps'].sum())} steps")
-    st.metric("Total Calories",
-              f"{int(daily_stats['total_calories'].sum())} kcal")
-    st.metric("Total Sleep",
-              f"{int(daily_stats['total_sleep_minutes'].sum())} min")
-    st.metric("Resting Heart Rate",
-              f"{int(daily_stats['resting_hr'].sum())} bpm")
+    st.metric("Total Calories", f"{int(daily_stats['total_calories'].sum())} kcal")
+    st.metric("Total Sleep", f"{int(daily_stats['total_sleep_minutes'].sum())} min")
+    st.metric("Resting Heart Rate", f"{int(daily_stats['resting_hr'].sum())} bpm")
     st.metric("Average Intensity", f"{avg_intensity} ms")
 
-    # Anomaly alerts with units mentioned in the messages if needed
     anomalies = []
     if detect_anomaly("Sleep (Hours)", daily_stats["total_sleep_minutes"].sum() / 60):
         anomalies.append("⚠️ Unusual sleep duration detected! (in hours)")
@@ -143,7 +153,6 @@ if not daily_stats.empty:
 
     if anomalies:
         st.warning("\n".join(anomalies))
-
 
 # Historical Data Query (with Intensity)
 historical_query = """
@@ -169,7 +178,6 @@ if not historical_data.empty:
         "Total Steps", "Total Calories", "Total Sleep", "Resting HR", "Average Intensity"
     ])
 
-    # Map the displayed metric to the column in historical_data
     metric_mapping = {
         "Total Steps": "total_steps",
         "Total Calories": "total_calories",
@@ -178,7 +186,6 @@ if not historical_data.empty:
         "Average Intensity": "avg_intensity"
     }
 
-    # Map the displayed metric to the threshold metric name (if applicable)
     threshold_mapping = {
         "Total Calories": "Calories (kcal/day)",
         "Total Sleep": "Sleep (Hours)",
@@ -186,12 +193,10 @@ if not historical_data.empty:
         "Average Intensity": "Intensity (HRV in ms)"
     }
 
-    # Apply anomaly detection: for sleep, convert minutes to hours before checking
     if metric_choice in threshold_mapping:
         anomaly_metric = threshold_mapping[metric_choice]
         historical_data["is_anomaly"] = historical_data[metric_mapping[metric_choice]].apply(
-            lambda x: detect_anomaly(
-                anomaly_metric, x if metric_choice != "Total Sleep" else x / 60)
+            lambda x: detect_anomaly(anomaly_metric, x if metric_choice != "Total Sleep" else x / 60)
         )
     else:
         historical_data["is_anomaly"] = False
@@ -199,7 +204,6 @@ if not historical_data.empty:
     fig = px.line(historical_data, x="activity_date", y=metric_mapping[metric_choice],
                   title=f"Historical {metric_choice}")
 
-    # Highlight anomalies with red markers
     anomalies_df = historical_data[historical_data["is_anomaly"]]
     fig.add_scatter(
         x=anomalies_df["activity_date"],
@@ -211,23 +215,19 @@ if not historical_data.empty:
 
     st.plotly_chart(fig)
 
-# MET values for the last 7 days
-
-
+# -------------------------
+# Neo4j MET & Recommendations
+# -------------------------
 def get_neo4j_session():
-    """Establish a connection to Neo4j and handle errors."""
     try:
-        driver = GraphDatabase.driver(
-            NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
-        driver.verify_connectivity()  # Ensures the connection is working
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+        driver.verify_connectivity()
         return driver.session()
     except Exception as e:
         st.error(f"Neo4j Connection Error: {str(e)}")
         return None
 
-
 def fetch_met_data(user_id):
-    """Fetches MET insights for the last 7 days from Neo4j."""
     query = """
     MATCH (u:User {user_id: $user_id})-[:HAS_MET]->(m:MET)
     RETURN 
@@ -237,41 +237,35 @@ def fetch_met_data(user_id):
         m.afternoon_avg_met AS afternoon_avg_met, m.afternoon_likely_activity AS afternoon_likely_activity,
         m.evening_avg_met AS evening_avg_met, m.evening_likely_activity AS evening_likely_activity
     """
-    with get_neo4j_session() as session:
-        result = session.run(query, user_id=int(user_id))
+    session = get_neo4j_session()
+    if session is None:
+        return None
+    with session as s:
+        result = s.run(query, user_id=int(user_id))
         data = result.single()
 
     if data:
         return dict(data)
     return None
 
-
-# User ID input for testing
-
 met_data = fetch_met_data(user_id)
 
-# Display MET Insights if data is available
 if met_data:
     st.write("### Last 7 Days MET Insights")
-    st.metric("Early Morning MET",
-              met_data["early_morning_avg_met"], met_data["early_morning_likely_activity"])
-    st.metric(
-        "Morning MET", met_data["morning_avg_met"], met_data["morning_likely_activity"])
-    st.metric("Afternoon MET",
-              met_data["afternoon_avg_met"], met_data["afternoon_likely_activity"])
-    st.metric(
-        "Evening MET", met_data["evening_avg_met"], met_data["evening_likely_activity"])
+    st.metric("Early Morning MET", met_data["early_morning_avg_met"], met_data["early_morning_likely_activity"])
+    st.metric("Morning MET", met_data["morning_avg_met"], met_data["morning_likely_activity"])
+    st.metric("Afternoon MET", met_data["afternoon_avg_met"], met_data["afternoon_likely_activity"])
+    st.metric("Evening MET", met_data["evening_avg_met"], met_data["evening_likely_activity"])
 else:
     st.warning("No MET data available for this user.")
-
 
 def get_recommendations(user_id: int):
     query = """
     MATCH (u:User {user_id: $user_id})
         OPTIONAL MATCH (u)-[:BELONGS_TO]->(c)
         WHERE c:ClusterA OR c:ClusterB OR c:ClusterC OR c:ClusterD
-        OPTIONAL MATCH (peer)-[:HAS_DAILY_METRIC]->(dm:DailyMetric)
         OPTIONAL MATCH (c)-[:CONTAINS]->(peer:User)
+        OPTIONAL MATCH (peer)-[:HAS_DAILY_METRIC]->(dm:DailyMetric)
         WHERE dm.total_sleep_minutes IS NOT NULL OR 
                 dm.total_calories IS NOT NULL OR
                 dm.average_intensity IS NOT NULL
@@ -307,10 +301,12 @@ def get_recommendations(user_id: int):
                 ELSE "Consider reducing high-intensity workouts to improve recovery."
             END AS intensity_recommendation
     """
-    with get_neo4j_session() as session:
-        result = session.run(query, user_id=int(user_id))
+    session = get_neo4j_session()
+    if session is None:
+        return None
+    with session as s:
+        result = s.run(query, user_id=int(user_id))
         record = result.single()
-        print(record)
         if record:
             return {
                 "sleep_label": record["sleep_label"],
@@ -323,20 +319,14 @@ def get_recommendations(user_id: int):
         else:
             return None
 
-
 # Streamlit UI
 st.title("Health Recommendations Based on Similar Profiles")
-
 
 recommendations = get_recommendations(user_id)
 if recommendations:
     st.subheader("Your Recommendations")
-    st.write(
-        f"**{recommendations['sleep_label']}** {recommendations['sleep_recommendation']}")
-    st.write(
-        f"**{recommendations['calories_label']}** {recommendations['calories_recommendation']}")
-    st.write(
-        f"**{recommendations['intensity_label']}** {recommendations['intensity_recommendation']}")
+    st.write(f"**{recommendations['sleep_label']}** {recommendations['sleep_recommendation']}")
+    st.write(f"**{recommendations['calories_label']}** {recommendations['calories_recommendation']}")
+    st.write(f"**{recommendations['intensity_label']}** {recommendations['intensity_recommendation']}")
 else:
-    st.warning(
-        "No recommendations found. Please check your User ID or try again later.")
+    st.warning("No recommendations found. Please check your User ID or try again later.")
