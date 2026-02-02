@@ -15,7 +15,7 @@ DB_CONFIG = {
     'port': 5432,
     'dbname': 'testname',
     'user': 'postgres',
-    'password': '5285248868K$p'
+    'password': '5185148868K$p'
 }
 
 
