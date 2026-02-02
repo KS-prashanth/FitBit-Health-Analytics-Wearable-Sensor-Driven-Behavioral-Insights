@@ -7,15 +7,15 @@ from neo4j import GraphDatabase
 # Neo4j credentials
 NEO4J_URI = "neo4j+ssc://9d24ccb0.databases.neo4j.io"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "ll0grkN_ME_vUSDlN2JMRd12xZ8m8Qmj25M0e5LZFuA"
+NEO4J_PASSWORD = "omVxl-U8whzzk-jKPygO-TElJr-986SgKECIgcoVkec"
 
 # Database connection
 DB_CONFIG = {
-    'host': 'database-1.cb0gsmcyc0ns.us-west-1.rds.amazonaws.com',
+    'host': 'database-1.cfkiysy2kojp.us-east-2.rds.amazonaws.com',
     'port': 5432,
-    'dbname': 'fitbit_data',
+    'dbname': 'testname',
     'user': 'postgres',
-    'password': 'Pass1234!'
+    'password': '5285248868K$p'
 }
 
 
