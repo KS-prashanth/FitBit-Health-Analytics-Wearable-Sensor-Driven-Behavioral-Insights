@@ -2,9 +2,9 @@ import logging
 from neo4j import GraphDatabase
 
 # Configure Neo4j credentials (ensure these are stored securely, e.g., in Lambda environment variables)
-NEO4J_URI = "neo4j+s://9d24ccb0.databases.neo4j.io"
+NEO4J_URI = "neo4j+s://bc02f7bd.databases.neo4j.io"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "ll0grkN_ME_vUSDlN2JMRd12xZ8m8Qmj25M0e5LZFuA"
+NEO4J_PASSWORD = "omVxl-U8whzzk-jKPygO-TElJr-986SgKECIgcoVkec"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
