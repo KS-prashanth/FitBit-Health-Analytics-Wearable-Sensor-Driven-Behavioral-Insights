@@ -33,12 +33,35 @@ def fetch_data(query, params=None):
 # Streamlit UI
 st.title("📊 Fitbit Health Dashboard")
 
-# User Login
+import streamlit as st
+import pandas as pd
+import psycopg2
+
+def get_connection():
+    return psycopg2.connect(**DB_CONFIG)
+
+def fetch_data(query, params=None):
+    conn = get_connection()
+    df = pd.read_sql(query, conn, params=params)
+    conn.close()
+    return df
+
+@st.cache_data(ttl=300)  # cache for 5 minutes
+def get_user_ids():
+    df = fetch_data("SELECT DISTINCT user_id FROM daily_data ORDER BY user_id")
+    return df["user_id"].dropna().astype(int).tolist()
+
+# --- Streamlit UI ---
 st.sidebar.header("User Login")
-user_id = st.sidebar.text_input("Enter User ID")
-if not user_id:
-    st.warning("Please enter a valid User ID to proceed.")
+
+user_ids = get_user_ids()
+
+if not user_ids:
+    st.sidebar.error("No user IDs found in the database.")
     st.stop()
+
+user_id = st.sidebar.selectbox("Select User ID", user_ids)
+
 
 # Fetch available dates
 date_query = "SELECT MIN(activity_date), MAX(activity_date) FROM daily_data WHERE user_id = %s"
