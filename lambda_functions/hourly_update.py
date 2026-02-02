@@ -2,11 +2,11 @@ import psycopg2
 import os
 
 DB_CONFIG = {
-    'host': 'database-1.cb0gsmcyc0ns.us-west-1.rds.amazonaws.com',
+    'host': 'database-1.cfkiysy2kojp.us-east-2.rds.amazonaws.com',
     'port': 5432,
-    'dbname': 'fitbit_data',
+    'dbname': 'testname',
     'user': 'postgres',
-    'password': 'Pass1234!'
+    'password': '5185148868K$p'
 }
 
 
