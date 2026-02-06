@@ -1,14 +1,11 @@
-# DSC202 - Fitness Tracker Data Management & Visualization
+# Fitbit Health Analytics: Wearable Sensor–Driven Behavioral Insights
 
 ## 📌 Project Overview
 
 This project focuses on managing and visualizing fitness tracker data using **PostgreSQL (AWS RDS), Neo4j, and a Streamlit web app**. The system processes user activity data, computes **MET values**, detects **anomalies**, and provides **insights through interactive visualizations**.
 
 ## 🔗 Links
-
-- **📽️ Presentation:** [Click Here](https://ucsdcloud-my.sharepoint.com/:v:/g/personal/rkachroo_ucsd_edu/Ee3Hilzws6lKuGR4vkkJxpcBtznyUDpNQf3SZKZMMIKJpg?e=sT5J15&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D)
-- **📂 GitHub Repository:** [DSC202](https://github.com/Chiragga24/DSC202)
-- **📊 Live Streamlit App:** [Test the App](https://dsc202-project.streamlit.app/)
+- **📊 Live Streamlit App:** [Test the App](Removed because of a subscription issue; I will add it back shortly.)
 
 ## 🛠️ Tech Stack
 
@@ -39,7 +36,7 @@ This project focuses on managing and visualizing fitness tracker data using **Po
 - Stores user relationships with MET scores and health metrics.
 - Tracks daily summaries, anomalies, and activity clusters
 
-## ⚡ AWS Lambda Functions
+## AWS Lambda Functions
 
 The project utilizes four **AWS Lambda** functions to automate processing:
 
@@ -90,29 +87,6 @@ The sample data files provided in the repository correspond to the database tabl
 | `Likely Activity - Sheet1.csv`     | `met_data`            | MET (Metabolic Equivalent of Task) values indicating the estimated energy expenditure for different activity periods. |
 | `Metric Explanations - Sheet1.csv` | `metric_explanations` | Definitions and explanations of various health metrics used in the dataset.                                           |
 
-## 🚀 How to Run Locally
-
-### **1️⃣ Clone the Repository**
-
-```bash
-git clone https://github.com/Chiragga24/DSC202.git
-cd DSC202
-```
-
-### **2️⃣ Install Dependencies**
-
-Ensure you have Python 3.8+ installed, then run:
-
-```bash
-pip install -r requirements.txt
-```
-
-### **3️⃣ Run the Streamlit App**
-
-```bash
-streamlit run app.py
-
-```
 
 ## 📊 How to Test
 
@@ -121,16 +95,3 @@ Use the following **User IDs** to explore data in the app:
 - 99990003
 - 5553957443
 - 6962181067
-
-## Technical Report
-
-For a detailed overview of this project, including methodology, implementation, and analysis, refer to the Final Technical Report:
-📄 [[Technical Report](https://github.com/Chiragga24/DSC202/blob/main/DSC_202_Final_Project.pdf)]
-
-## 👥 Team Members
-
-- Chirag Agarwal - A69034328
-
-- Raghav Kachroo - A69035155
-
-- Hemanth Bodala - A69037783
